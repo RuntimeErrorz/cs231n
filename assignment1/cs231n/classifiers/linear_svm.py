@@ -12,8 +12,8 @@ def svm_loss_naive(W, X, y, reg):
     of N examples.
 
     Inputs:
-    - W: A numpy array of shape (D, C) containing weights.
-    - X: A numpy array of shape (N, D) containing a minibatch of data.
+    - W: A numpy array of shape (D, C) containing weights. (3073, 10)
+    - X: A numpy array of shape (N, D) containing a minibatch of data.  (500, 3073)
     - y: A numpy array of shape (N,) containing training labels; y[i] = c means
       that X[i] has label c, where 0 <= c < C.
     - reg: (float) regularization strength
@@ -29,12 +29,16 @@ def svm_loss_naive(W, X, y, reg):
     num_train = X.shape[0]
     loss = 0.0
     for i in range(num_train):
-        scores = X[i].dot(W)
+        scores = X[i].dot(W) #X[i] = (1, 3073) W = (3073, 10)
         correct_class_score = scores[y[i]]
-        for j in range(num_classes):
+        for j in range(num_classes): #1...500
             if j == y[i]:
                 continue
-            margin = scores[j] - correct_class_score + 1  # note delta = 1
+            margin = scores[j] - correct_class_score + 1  # s[j] - s[y[i]] > -1
+                                                          # s[y[i]] - s[j] <  1
+                                                          # s = X[i]W
+                                                          # s[j] = X[i]W[j]
+                                                          # s[y[i]] = X[i]W[y[i]]
             if margin > 0:
                 loss += margin
 
