@@ -7,7 +7,6 @@ from ..classifiers.linear_svm import *
 from ..classifiers.softmax import *
 
 
-
 class LinearClassifier(object):
     def __init__(self):
         self.W = None
@@ -66,8 +65,8 @@ class LinearClassifier(object):
             #########################################################################
             # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-            pass
-
+            indices = np.random.choice(num_classes, batch_size, replace=True)
+            X_batch, y_batch = X[indices], y[indices]
             # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
             # evaluate loss and gradient
@@ -80,8 +79,7 @@ class LinearClassifier(object):
             # Update the weights using the gradient and the learning rate.          #
             #########################################################################
             # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-            pass
+            self.W -= learning_rate * grad
 
             # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
