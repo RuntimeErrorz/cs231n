@@ -74,8 +74,5 @@ def svm_loss_vectorized(W, X, y, reg):
     arr = [[4 1 1] 
            [0 0 5]] 这样赋值是不是有点奇怪？
     """
-    print(X[:2])
-    print(y[:2])
-    print(masks[:2])
     dW = X.T.dot(masks) / num_train + 2 * reg * W # (3073, 500) (500, 10) = (3073, 10) = W.shape，
     return loss, dW
