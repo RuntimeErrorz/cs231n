@@ -2,7 +2,6 @@ from builtins import range
 import numpy as np
 
 
-
 def affine_forward(x, w, b):
     """
     Computes the forward pass for an affine (fully-connected) layer.
@@ -13,27 +12,15 @@ def affine_forward(x, w, b):
     then transform it to an output vector of dimension M.
 
     Inputs:
-    - x: A numpy array containing input data, of shape (N, d_1, ..., d_k)
-    - w: A numpy array of weights, of shape (D, M)
-    - b: A numpy array of biases, of shape (M,)
+    - x: A numpy array containing input data, of shape (N, d_1, ..., d_k) (2, 4, 5, 6) 
+    - w: A numpy array of weights, of shape (D, M) (120, 3)
+    - b: A numpy array of biases, of shape (M,)    (3,)
 
     Returns a tuple of:
     - out: output, of shape (N, M)
     - cache: (x, w, b)
     """
-    out = None
-    ###########################################################################
-    # TODO: Implement the affine forward pass. Store the result in out. You   #
-    # will need to reshape the input into rows.                               #
-    ###########################################################################
-    # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-    pass
-
-    # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
+    out = x.reshape(x.shape[0], -1).dot(w) + b # (2(batches), 120(每个样本的总特征数)) dot (120, 3（类别数）) + (3,) = (2, 3)
     cache = (x, w, b)
     return out, cache
 
@@ -56,17 +43,12 @@ def affine_backward(dout, cache):
     """
     x, w, b = cache
     dx, dw, db = None, None, None
-    ###########################################################################
-    # TODO: Implement the affine backward pass.                               #
-    ###########################################################################
-    # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-    pass
-
-    # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
+    dx = dout.dot(w.T).reshape(x.shape) # (2, 3) * （3, 120） -> (2, 4, 5, 6)
+    dw = x.reshape(x.shape[0], -1).T.dot(dout) # (2, 4, 5, 6) -> (2, 120).T -> (120, 2) dot (2, 3) -> (120, 3)
+    db = np.sum(dout, axis=0) 
+    '''
+    
+    '''
     return dx, dw, db
 
 
@@ -81,18 +63,7 @@ def relu_forward(x):
     - out: Output, of the same shape as x
     - cache: x
     """
-    out = None
-    ###########################################################################
-    # TODO: Implement the ReLU forward pass.                                  #
-    ###########################################################################
-    # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-    pass
-
-    # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
+    out = np.maximum(x, 0)
     cache = x
     return out, cache
 
@@ -109,17 +80,7 @@ def relu_backward(dout, cache):
     - dx: Gradient with respect to x
     """
     dx, x = None, cache
-    ###########################################################################
-    # TODO: Implement the ReLU backward pass.                                 #
-    ###########################################################################
-    # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-    pass
-
-    # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
+    dx = np.where(x > 0, dout, 0)
     return dx
 
 
@@ -758,55 +719,34 @@ def svm_loss(x, y):
 
     Inputs:
     - x: Input data, of shape (N, C) where x[i, j] is the score for the jth
-      class for the ith input.
+      class for the ith input.                                                  (50, 10) 
     - y: Vector of labels, of shape (N,) where y[i] is the label for x[i] and
-      0 <= y[i] < C
+      0 <= y[i] < C                                                             (50,)
 
     Returns a tuple of:
     - loss: Scalar giving the loss
-    - dx: Gradient of the loss with respect to x
+    - dx: Gradient of the loss with respect to x                                (50, 10)
     """
-    loss, dx = None, None
 
-    ###########################################################################
-    # TODO: Copy over your solution from A1.
-    ###########################################################################
-    # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+    correct_scores = x[np.arange(x.shape[0]), y].reshape(-1, 1) #  (N, ) -> (N , 1)
+    margins = np.maximum(0, x - correct_scores + 1)
+    loss = np.sum(margins) / x.shape[0]
 
-    pass
-
-    # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
+    dx = np.zeros_like(x)
+    dx[margins > 0] = 1
+    dx[np.arange(x.shape[0]), y] -= np.sum(margins > 0, axis=1)
+    dx /= x.shape[0]
     return loss, dx
 
 
 def softmax_loss(x, y):
     """
-    Computes the loss and gradient for softmax classification.
-
-    Inputs:
-    - x: Input data, of shape (N, C) where x[i, j] is the score for the jth
-      class for the ith input.
-    - y: Vector of labels, of shape (N,) where y[i] is the label for x[i] and
-      0 <= y[i] < C
-
-    Returns a tuple of:
-    - loss: Scalar giving the loss
-    - dx: Gradient of the loss with respect to x
+    同上
     """
-    loss, dx = None, None
+    log_probs = x - np.log(np.sum(np.exp(x), axis=1, keepdims=True))
+    loss = -np.sum(log_probs[np.arange(x.shape[0]), y]) / x.shape[0]
 
-    ###########################################################################
-    # TODO: Copy over your solution from A1.
-    ###########################################################################
-    # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-    pass
-
-    # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
+    dx = np.exp(log_probs)
+    dx[np.arange(x.shape[0]), y] -= 1
+    dx /= x.shape[0]
     return loss, dx
