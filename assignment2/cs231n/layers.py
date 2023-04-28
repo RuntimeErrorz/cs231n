@@ -19,7 +19,7 @@ def affine_forward(x, w, b):
     - out: output, of shape (N, M)
     - cache: (x, w, b)
     """
-    print(x.reshape(x.shape[0], -1).shape, w.shape, b.shape) # (2, 15) (15, 20, 30) (20, 30)
+    # (2(batches), 120(每个样本的总特征数)) dot (120, 3（类别数）) + (3,) = (2, 3)
     out = np.dot(x.reshape(x.shape[0], -1), w) + b
     cache = (x, w, b)
     return out, cache
@@ -59,8 +59,7 @@ def relu_forward(x):
     - out: Output, of the same shape as x
     - cache: x
     """
-    out = None
-    out = np.maximum(x > 0, 0)
+    out = np.maximum(x, 0)
     cache = x
     return out, cache
 

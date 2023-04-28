@@ -1,2 +1,3 @@
 *.pdf
 /datasets/
+.DS_Store

@@ -59,7 +59,6 @@ class FullyConnectedNet(object):
         self.num_layers = 1 + len(hidden_dims)
         self.dtype = dtype
         self.params = {}
-
         ############################################################################
         # TODO: Initialize the parameters of the network, storing all values in    #
         # the self.params dictionary. Store weights and biases for the first layer #
@@ -76,10 +75,24 @@ class FullyConnectedNet(object):
         # input_dim   15 // 特征数，例如32*32=1024
         # hidden_dims [20, 30]
         # num_classes 10
-        for i in range(self.num_layers):
-            self.params['W{}'.format(i)] = np.random.normal(loc=0, scale=weight_scale, size=l)
-        pass
+        for i in range(len(hidden_dims) + 1):  # 0 1 2
+            if i == 0:
+                self.params['W{}'.format(
+                    i+1)] = np.random.normal(loc=0, scale=weight_scale, size=(input_dim, hidden_dims[i]))
+                self.params['b{}'.format(i+1)] = np.zeros(hidden_dims[i])
+            ## W(15, 20)
 
+            elif i < len(hidden_dims):  # 1
+                self.params['W{}'.format(i+1)] = np.random.normal(
+                    loc=0, scale=weight_scale, size=(hidden_dims[i-1], hidden_dims[i]))
+                self.params['b{}'.format(i+1)] = np.zeros(hidden_dims[i])
+            ## W(20, 30)
+            else:  # 2
+                self.params['W{}'.format(i+1)] = np.random.normal(
+                    loc=0, scale=weight_scale, size=(hidden_dims[i-1], num_classes))
+                self.params['b{}'.format(i+1)] = np.zeros(num_classes)
+
+            ##　W(30, 10)
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
         #                             END OF YOUR CODE                             #
@@ -101,7 +114,8 @@ class FullyConnectedNet(object):
         # pass of the second batch normalization layer, etc.
         self.bn_params = []
         if self.normalization == "batchnorm":
-            self.bn_params = [{"mode": "train"} for i in range(self.num_layers - 1)]
+            self.bn_params = [{"mode": "train"}
+                              for i in range(self.num_layers - 1)]
         if self.normalization == "layernorm":
             self.bn_params = [{} for i in range(self.num_layers - 1)]
 
@@ -111,7 +125,7 @@ class FullyConnectedNet(object):
 
     def loss(self, X, y=None):
         """Compute loss and gradient for the fully connected net.
-        
+
         Inputs:
         - X: Array of input data of shape (N, d_1, ..., d_k)
         - y: Array of labels, of shape (N,). y[i] gives the label for X[i].
@@ -151,8 +165,14 @@ class FullyConnectedNet(object):
         # layer, etc.                                                              #
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-        pass
+        caches = []
+        for i in range(self.num_layers - 1):
+            X, cache = affine_relu_forward(
+                X, self.params['W{}'.format(i+1)], self.params['b{}'.format(i+1)])
+            caches.append(cache)
+        scores, cache = affine_forward(X, self.params['W{}'.format(
+            self.num_layers)], self.params['b{}'.format(self.num_layers)])
+        caches.append(cache)
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
@@ -178,8 +198,19 @@ class FullyConnectedNet(object):
         # of 0.5 to simplify the expression for the gradient.                      #
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+        loss, dout = softmax_loss(scores, y)
+        for i in range(self.num_layers):
+            loss += 0.5*self.reg*np.sum(self.params['W{}'.format(i+1)]**2)
+            if i == 0:  # W3
+                dout, grads['W{}'.format(self.num_layers - i)
+                            ], db = affine_backward(dout, caches[self.num_layers - i - 1])
+            else:  # W2, W1
+                dout, grads['W{}'.format(
+                    self.num_layers - i)], db = affine_relu_backward(dout, caches[self.num_layers - i - 1])
+            grads['W{}'.format(self.num_layers - i)] += self.reg * \
+                self.params['W{}'.format(self.num_layers - i)]
+            grads['b{}'.format(self.num_layers - i)] = db
 
-        pass
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
