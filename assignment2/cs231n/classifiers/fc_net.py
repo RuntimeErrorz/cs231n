@@ -73,7 +73,11 @@ class FullyConnectedNet(object):
         # parameters should be initialized to zeros.                               #
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
+        # input_dim   15 // 特征数，例如32*32=1024
+        # hidden_dims [20, 30]
+        # num_classes 10
+        for i in range(self.num_layers):
+            self.params['W{}'.format(i)] = np.random.normal(loc=0, scale=weight_scale, size=l)
         pass
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****

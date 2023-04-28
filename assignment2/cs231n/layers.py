@@ -19,18 +19,8 @@ def affine_forward(x, w, b):
     - out: output, of shape (N, M)
     - cache: (x, w, b)
     """
-    out = None
-    ###########################################################################
-    # TODO: Copy over your solution from Assignment 1.                        #
-    ###########################################################################
-    # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-    pass
-
-    # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
+    print(x.reshape(x.shape[0], -1).shape, w.shape, b.shape) # (2, 15) (15, 20, 30) (20, 30)
+    out = np.dot(x.reshape(x.shape[0], -1), w) + b
     cache = (x, w, b)
     return out, cache
 
@@ -52,17 +42,10 @@ def affine_backward(dout, cache):
     """
     x, w, b = cache
     dx, dw, db = None, None, None
-    ###########################################################################
-    # TODO: Copy over your solution from Assignment 1.                        #
-    ###########################################################################
-    # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-    pass
-
-    # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
+    dx = dout.dot(w.T).reshape(x.shape)  # (2, 3) * （3, 120） -> (2, 4, 5, 6)
+    # (2, 4, 5, 6) -> (2, 120).T -> (120, 2) dot (2, 3) -> (120, 3)
+    dw = x.reshape(x.shape[0], -1).T.dot(dout)
+    db = np.sum(dout, axis=0)
     return dx, dw, db
 
 
@@ -77,17 +60,7 @@ def relu_forward(x):
     - cache: x
     """
     out = None
-    ###########################################################################
-    # TODO: Copy over your solution from Assignment 1.                        #
-    ###########################################################################
-    # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-    pass
-
-    # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
+    out = np.maximum(x > 0, 0)
     cache = x
     return out, cache
 
@@ -103,17 +76,7 @@ def relu_backward(dout, cache):
     - dx: Gradient with respect to x
     """
     dx, x = None, cache
-    ###########################################################################
-    # TODO: Copy over your solution from Assignment 1.                        #
-    ###########################################################################
-    # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-    pass
-
-    # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
+    dx = np.where(x>0, dout, 0)
     return dx
 
 
@@ -131,18 +94,12 @@ def softmax_loss(x, y):
     - dx: Gradient of the loss with respect to x
     """
     loss, dx = None, None
+    log_probs = x - np.log(np.sum(np.exp(x), axis=1, keepdims=True))
+    loss = -np.sum(log_probs[np.arange(x.shape[0]), y]) / x.shape[0]
 
-    ###########################################################################
-    # TODO: Copy over your solution from Assignment 1.                        #
-    ###########################################################################
-    # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-    pass
-
-    # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
+    dx = np.exp(log_probs)
+    dx[np.arange(x.shape[0]), y] -= 1
+    dx /= x.shape[0] 
     return loss, dx
 
 
@@ -692,7 +649,7 @@ def spatial_batchnorm_backward(dout, cache):
 
 def spatial_groupnorm_forward(x, gamma, beta, G, gn_param):
     """Computes the forward pass for spatial group normalization.
-    
+
     In contrast to layer normalization, group normalization splits each entry in the data into G
     contiguous pieces, which it then normalizes independently. Per-feature shifting and scaling
     are then applied to the data, in a manner identical to that of batch normalization and layer
