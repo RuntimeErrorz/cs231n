@@ -146,10 +146,15 @@ class FullyConnectedNet(object):
                 beta = self.params[f'beta{i+1}']
                 bn_param = self.bn_params[i]
                 X, cache = affine_norm_relu_forward(
-                    X, self.params[f'W{i+1}'], self.params[f'b{i+1}'], gamma, beta, bn_param) #(100, 5) (100, 100) (100,)
+                    X, self.params[f'W{i+1}'], self.params[f'b{i+1}'], gamma, beta, bn_param)  # (100, 5) (100, 100) (100,)
             else:
                 X, cache = affine_relu_forward(
                     X, self.params[f'W{i+1}'], self.params[f'b{i+1}'])
+            if self.use_dropout:
+                X, cache_dropout = dropout_forward(X, self.dropout_param)
+                cache = (cache, cache_dropout)
+            else:
+                cache = (cache, None)
             caches.append(cache)
         scores, cache = affine_forward(
             X, self.params[f'W{self.num_layers}'], self.params[f'b{self.num_layers}'])
@@ -166,15 +171,18 @@ class FullyConnectedNet(object):
                 dout, grads[f'W{self.num_layers - i}'], db = affine_backward(
                     dout, caches[self.num_layers - i - 1])
             else:  # W2, W1
+                if self.use_dropout:
+                    dout = dropout_backward(
+                        dout, caches[self.num_layers - i - 1][1])
                 if self.normalization:
                     dout, dw, db, dgamma, dbeta = affine_norm_relu_backward(
-                        dout, caches[self.num_layers - i - 1])
+                        dout, caches[self.num_layers - i - 1][0])
                     grads[f'W{self.num_layers - i}'] = dw
                     grads[f'gamma{self.num_layers - i}'] = dgamma
                     grads[f'beta{self.num_layers - i}'] = dbeta
                 else:
                     dout, grads[f'W{ self.num_layers - i}'], db = affine_relu_backward(
-                        dout, caches[self.num_layers - i - 1])
+                        dout, caches[self.num_layers - i - 1][0])
             grads[f'W{self.num_layers - i}'] += self.reg * \
                 self.params['W{}'.format(self.num_layers - i)]
             grads[f'b{self.num_layers - i}'] = db
