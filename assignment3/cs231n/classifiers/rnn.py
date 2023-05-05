@@ -147,14 +147,21 @@ class CaptioningRNN:
         # in your implementation, if needed.                                       #
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+        h0, cache_affine = affine_forward(features, W_proj, b_proj)
+        embed_caption, cache_embed = word_embedding_forward(
+            captions_in, W_embed)
+        h, cache_rnn = rnn_forward(embed_caption, h0, Wx, Wh, b)
+        scores, cache_temporal_affine = temporal_affine_forward(
+            h, W_vocab, b_vocab)
+        loss, dout = temporal_softmax_loss(scores, captions_out, mask)
 
-        pass
-
-        # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-        ############################################################################
-        #                             END OF YOUR CODE                             #
-        ############################################################################
-
+        dout, grads["W_vocab"], grads["b_vocab"] = temporal_affine_backward(
+            dout, cache_temporal_affine)
+        dout, dh0, grads["Wx"], grads["Wh"], grads["b"] = rnn_backward(
+            dout, cache_rnn)
+        grads["W_embed"] = word_embedding_backward(dout, cache_embed)
+        _, grads["W_proj"], grads["b_proj"] = affine_backward(
+            dh0, cache_affine)
         return loss, grads
 
     def sample(self, features, max_length=30):
@@ -215,11 +222,14 @@ class CaptioningRNN:
         # you are using an LSTM, initialize the first cell state to zeros.        #
         ###########################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+        h = features.dot(W_proj) + b_proj
+        _, W = W_embed.shape
+        x = np.ones((N, W)) * W_embed[self._start]
 
-        pass
-
-        # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-        ############################################################################
-        #                             END OF YOUR CODE                             #
-        ############################################################################
+        for t in range(max_length):
+            next_h, _ = rnn_step_forward(x, h, Wx, Wh, b)
+            out = next_h.dot(W_vocab) + b_vocab
+            captions[:, t] = out.argmax(axis=1)
+            x = W_embed[captions[:, t]]  # or W_embed[captions[:, t], :]
+            h = next_h
         return captions
