@@ -38,15 +38,20 @@ class PositionalEncoding(nn.Module):
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
 
-        # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-        ############################################################################
-        #                             END OF YOUR CODE                             #
-        ############################################################################
-
-        # Make sure the positional encodings will be saved with the model
-        # parameters (mostly for completeness).
+        """
+        [[0],
+        [1],) * ([0.0000, -0.3333, -0.6667])
+        ======== 
+        [[ 0.0000, -0.0000, -0.0000],
+        [ 0.0000, -0.3333, -0.6667]])
+        """
+        len_idx = torch.arange(0, max_len).unsqueeze(1) 
+        dim_idx = torch.arange(0, embed_dim, step=2)    # for example: embed_dim=8, dim_idx=[0,2,4,6]
+        # (L, 1) * (1, D/2)(broadcast to l, D/2) => (L, D/2)
+        idx_matrix = len_idx * 1e4 ** (-dim_idx / embed_dim)  # [0.0, 0.25, 0.5, 0.75] -> [1.0, 0.31622777, 0.1, 0.03162278] -> [0, ... ,7](L,1) *** (1,D/2) => (L,D/2)
+        pe[:, :, 0::2] = torch.sin(idx_matrix) # 偶数列，0::2 is short for 0:len:2
+        pe[:, :, 1::2] = torch.cos(idx_matrix) # 奇数列，1::2 is short for 1:len:2
         self.register_buffer('pe', pe)
 
     def forward(self, x):
@@ -63,19 +68,11 @@ class PositionalEncoding(nn.Module):
         N, S, D = x.shape
         # Create a placeholder, to be overwritten by your code below.
         output = torch.empty((N, S, D))
-        ############################################################################
-        # TODO: Index into your array of positional encodings, and add the         #
-        # appropriate ones to the input sequence. Don't forget to apply dropout    #
-        # afterward. This should only take a few lines of code.                    #
-        ############################################################################
-        # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+        
+        output = x + self.pe[:,:S,:] 
+        output = self.dropout(output)
 
-        pass
 
-        # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-        ############################################################################
-        #                             END OF YOUR CODE                             #
-        ############################################################################
         return output
 
 
@@ -147,6 +144,7 @@ class MultiHeadAttention(nn.Module):
         """
         N, S, E = query.shape
         N, T, E = value.shape
+        H = self.n_head
         # Create a placeholder, to be overwritten by your code below.
         output = torch.empty((N, S, E))
         ############################################################################
@@ -163,14 +161,18 @@ class MultiHeadAttention(nn.Module):
         #     prevent a value from influencing output. Specifically, the PyTorch   #
         #     function masked_fill may come in handy.                              #
         ############################################################################
-        # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-        pass
-
-        # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-        ############################################################################
-        #                             END OF YOUR CODE                             #
-        ############################################################################
+        """
+        N is the batch size, S is the source sequence length, T is the target sequence length, 
+        # and E is the embedding dimension
+        """
+        Q = self.query(query).reshape(N, S, H, E // H).permute(0, 2, 1, 3) # (N,S,E) -> (N,S,H,E//H) -> (N,H, S,    E//H)
+        K = self.key(key).reshape(N, T, H, E // H).permute(0, 2, 3, 1) # (N,T,E) -> (N,T,H,E//H) ->     (N,H, E//H, T)
+        V = self.value(value).reshape(N, T, H, E // H).permute(0, 2, 1, 3) # (N,T,E) -> (N,T,H,E//H) -> (N,H, T,    E//H)
+        QK = Q.matmul(K) / torch.sqrt(torch.Tensor([E / H])) # (N, H, S, E//H) * (N, H, E//H, T) -> (N, H, S, T)
+        if attn_mask is not None:
+            QK = QK.masked_fill(attn_mask == 0, -1e9)
+        QKV = self.attn_drop(F.softmax(QK, dim=-1)).matmul(V) # (N, H, S, T) * (N, H, T, E//H) -> (N, H, S, E//H) 
+        output = self.proj(QKV.permute(0, 2, 1, 3).reshape(N, S, E)) # (N, H, S, E//H) -> (N, S, H, E//H) -> (N, S, E)
         return output
 
 
