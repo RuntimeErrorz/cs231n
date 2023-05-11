@@ -15,6 +15,11 @@ class CaptioningTransformer(nn.Module):
     The Transformer receives input vectors of size D, has a vocab size of V,
     works on sequences of length T, uses word vectors of dimension W, and
     operates on minibatches of size N.
+
+    W：例如，假设我们使用100维的单词向量来表示单词。这意味着每个单词都被表示为一个包含100个实数值的向量。每个维度代表一个语义属性，如词义、上下文关系、词频等。
+    通过将单词映射到这个100维的向量空间中，我们可以捕捉到单词之间的关系和语义信息。
+
+
     """
     def __init__(self, word_to_idx, input_dim, wordvec_dim, num_heads=4,
                  num_layers=2, max_length=50):
@@ -90,13 +95,19 @@ class CaptioningTransformer(nn.Module):
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        captions_embedding_with_position = self.positional_encoding(self.embedding(captions)) # [N, T] -> [N, T, W]
+        feature_projection = self.visual_projection(features).unsqueeze(1) # [N, D] -> [N, 1, W]
+        '''
+        tgt is short for target!!!, is this common to use tgt as target?
+        tgt_mask 是一个下三角矩阵，用于在Decoder中对目标序列进行遮蔽操作。遮蔽操作的目的是在每个时间步只关注当前及之前的输入，而忽略后续的输入，以便模型生成序列时不会看到未来的信息。
 
-        # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-        ############################################################################
-        #                             END OF YOUR CODE                             #
-        ############################################################################
-
+        在代码中，tgt_mask 使用 torch.tril() 函数生成一个全为 1 的下三角矩阵，并根据 captions_embedding_with_position 的设备和数据类型进行相应的设置。
+        T 是序列的长度，captions_embedding_with_position 是经过嵌入和位置编码后的 caption，
+        通过将 tgt_mask 应用于注意力操作中，可以确保在解码过程中，每个时间步只能看到当前及之前的输入，从而保证了解码的自回归性质
+        '''
+        tgt_mask = torch.tril(torch.ones(T, T))
+        caption_result = self.transformer(captions_embedding_with_position, feature_projection, tgt_mask=tgt_mask) # [N, T, W]
+        scores = self.output(caption_result) # [N, T, W] -> [N, T, V]
         return scores
 
     def sample(self, features, max_length=30):
